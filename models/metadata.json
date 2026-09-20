@@ -1,0 +1,264 @@
+{
+  "model_version": "2026.09.20",
+  "treinado_em": "2026-09-20",
+  "algoritmo": "HistGradientBoostingClassifier",
+  "janela_historico": "2020-2024",
+  "ano_alvo": 2025,
+  "km_bin": 10,
+  "limiar_abstencao": 10,
+  "classes": [
+    "BAIXO",
+    "MEDIO",
+    "ALTO"
+  ],
+  "features": [
+    "uf",
+    "dia_semana",
+    "fase_dia",
+    "tr_n_acidentes",
+    "tr_n_mortos",
+    "tr_n_fer_graves",
+    "tr_n_fer_leves",
+    "tr_media_pessoas",
+    "tr_media_veiculos",
+    "tr_n_anos",
+    "tr_taxa_grave",
+    "tr_pista_dupla",
+    "tr_pista_multipla",
+    "tr_pista_simples",
+    "tr_urbano_nao",
+    "tr_urbano_sim",
+    "tr_trc_aclive",
+    "tr_trc_curva",
+    "tr_trc_declive",
+    "tr_trc_desvio_temporario",
+    "tr_trc_em_obras",
+    "tr_trc_intersecao_de_vias",
+    "tr_trc_ponte",
+    "tr_trc_reta",
+    "tr_trc_retorno_regulamentado",
+    "tr_trc_rotatoria",
+    "tr_trc_tunel",
+    "tr_trc_viaduto",
+    "tr_clima_chuva",
+    "tr_clima_ceu_claro",
+    "tr_clima_garoa_chuvisco",
+    "tr_clima_ignorado",
+    "tr_clima_nublado",
+    "tr_clima_sol",
+    "tr_causa_acessar_a_via_sem_observar_a",
+    "tr_causa_ausencia_de_reacao_do_condut",
+    "tr_causa_chuva",
+    "tr_causa_condutor_dormindo",
+    "tr_causa_condutor_deixou_de_manter_di",
+    "tr_causa_demais_falhas_mecanicas_ou_e",
+    "tr_causa_desobediencia_as_normas_de_t",
+    "tr_causa_falta_de_atencao_a_conducao",
+    "tr_causa_ingestao_de_alcool_pelo_cond",
+    "tr_causa_manobra_de_mudanca_de_faixa",
+    "tr_causa_reacao_tardia_ou_ineficiente",
+    "tr_causa_velocidade_incompativel",
+    "tr_tipo_atropelamento_de_pedestre",
+    "tr_tipo_capotamento",
+    "tr_tipo_colisao_com_objeto",
+    "tr_tipo_colisao_frontal",
+    "tr_tipo_colisao_lateral_mesmo_sentid",
+    "tr_tipo_colisao_transversal",
+    "tr_tipo_colisao_traseira",
+    "tr_tipo_queda_de_ocupante_de_veiculo",
+    "tr_tipo_saida_de_leito_carrocavel",
+    "tr_tipo_tombamento",
+    "tr_veic_automovel",
+    "tr_veic_caminhonete",
+    "tr_veic_caminhao",
+    "tr_veic_caminhao_trator",
+    "tr_veic_camioneta",
+    "tr_veic_motocicleta",
+    "tr_veic_motoneta",
+    "tr_veic_semireboque",
+    "tp_n_acidentes",
+    "tp_n_mortos",
+    "tp_n_fer_graves",
+    "tp_taxa_grave",
+    "tp_share_do_trecho"
+  ],
+  "categoricas": [
+    "uf",
+    "dia_semana",
+    "fase_dia"
+  ],
+  "n_treino": 90440,
+  "n_teste": 30156,
+  "split": "GroupShuffleSplit por trecho, test_size=0.25, seed=42",
+  "metricas": {
+    "modelo": {
+      "recall_alto": 0.4912528216704289,
+      "f1_macro": 0.5197533665173258
+    },
+    "baseline": {
+      "recall_alto": 0.6797404063205418,
+      "f1_macro": 0.39839156443959095
+    }
+  },
+  "priorizacao_orcamento_fixo": [
+    {
+      "orcamento": "5% (1507)",
+      "metodo": "baseline",
+      "acertos": 779,
+      "precisao": 0.5169210351692104,
+      "%_dos_ALTO_capturados": 21.98081264108352,
+      "lift": 4.398496257495121
+    },
+    {
+      "orcamento": "5% (1507)",
+      "metodo": "modelo",
+      "acertos": 875,
+      "precisao": 0.5806237558062376,
+      "%_dos_ALTO_capturados": 24.689616252821672,
+      "lift": 4.940544576775649
+    },
+    {
+      "orcamento": "10% (3015)",
+      "metodo": "baseline",
+      "acertos": 1217,
+      "precisao": 0.40364842454394695,
+      "%_dos_ALTO_capturados": 34.339729119638825,
+      "lift": 3.4346562896578057
+    },
+    {
+      "orcamento": "10% (3015)",
+      "metodo": "modelo",
+      "acertos": 1401,
+      "precisao": 0.4646766169154229,
+      "%_dos_ALTO_capturados": 39.53160270880361,
+      "lift": 3.95394696944173
+    },
+    {
+      "orcamento": "20% (6031)",
+      "metodo": "baseline",
+      "acertos": 1815,
+      "precisao": 0.30094511689603715,
+      "%_dos_ALTO_capturados": 51.21331828442438,
+      "lift": 2.5607508310149254
+    },
+    {
+      "orcamento": "20% (6031)",
+      "metodo": "modelo",
+      "acertos": 2098,
+      "precisao": 0.3478693417343724,
+      "%_dos_ALTO_capturados": 59.19864559819413,
+      "lift": 2.960030437173175
+    }
+  ],
+  "importancias": [
+    {
+      "feature": "fase_dia",
+      "importancia": 0.061706875591191666
+    },
+    {
+      "feature": "tp_n_acidentes",
+      "importancia": 0.03664468275429942
+    },
+    {
+      "feature": "tr_n_acidentes",
+      "importancia": 0.023331430331840264
+    },
+    {
+      "feature": "tr_n_fer_graves",
+      "importancia": 0.016762256342454613
+    },
+    {
+      "feature": "tr_pista_dupla",
+      "importancia": 0.005148188605363924
+    },
+    {
+      "feature": "tr_n_fer_leves",
+      "importancia": 0.005031945891322627
+    },
+    {
+      "feature": "tr_clima_sol",
+      "importancia": 0.003437324526465039
+    },
+    {
+      "feature": "tr_urbano_nao",
+      "importancia": 0.003215578257721674
+    },
+    {
+      "feature": "tr_causa_demais_falhas_mecanicas_ou_e",
+      "importancia": 0.0027459311075437496
+    },
+    {
+      "feature": "tp_taxa_grave",
+      "importancia": 0.002505562654963933
+    },
+    {
+      "feature": "tr_trc_ponte",
+      "importancia": 0.0023486515059151225
+    },
+    {
+      "feature": "tr_causa_falta_de_atencao_a_conducao",
+      "importancia": 0.0022086475171055886
+    },
+    {
+      "feature": "tr_veic_caminhao",
+      "importancia": 0.002074280777165057
+    },
+    {
+      "feature": "tr_veic_camioneta",
+      "importancia": 0.001906783406700659
+    },
+    {
+      "feature": "tr_media_pessoas",
+      "importancia": 0.0018808895563164156
+    },
+    {
+      "feature": "tr_tipo_colisao_com_objeto",
+      "importancia": 0.0018233602354265632
+    },
+    {
+      "feature": "tr_causa_manobra_de_mudanca_de_faixa",
+      "importancia": 0.0015455419819941179
+    },
+    {
+      "feature": "tr_taxa_grave",
+      "importancia": 0.0011126153265429612
+    },
+    {
+      "feature": "tr_trc_curva",
+      "importancia": 0.0010270977423328016
+    },
+    {
+      "feature": "tr_n_mortos",
+      "importancia": 0.0009701355552258484
+    },
+    {
+      "feature": "tr_trc_intersecao_de_vias",
+      "importancia": 0.00091824970711644
+    },
+    {
+      "feature": "tr_clima_ceu_claro",
+      "importancia": 0.0008755618678516855
+    },
+    {
+      "feature": "tr_trc_viaduto",
+      "importancia": 0.0006015954818881323
+    },
+    {
+      "feature": "tr_trc_reta",
+      "importancia": 0.000597538543261944
+    },
+    {
+      "feature": "tr_causa_reacao_tardia_ou_ineficiente",
+      "importancia": 0.00043357905218778986
+    }
+  ],
+  "limitacoes": [
+    "Sem exposicao (VMDA do DNIT): o modelo mede volume de acidentes, nao taxa por veiculo-km. Risco R1 do documento de negocio.",
+    "Trechos com menos de 10 acidentes em 2020-2024 nao sao avaliados (RE-6): 33% da malha, concentrando 4,9% dos acidentes graves."
+  ],
+  "versoes": {
+    "python": "3.12.10",
+    "scikit-learn": "1.9.1",
+    "pandas": "2.2.3"
+  }
+}

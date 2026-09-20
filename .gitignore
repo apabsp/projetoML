@@ -1,0 +1,15 @@
+# Dados brutos da PRF (~1,2 GB) - baixados do portal de dados abertos
+csvs/
+# Parquets intermediarios. gerados por src/build_dataset.py
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# BentoML
+bentoml/
+*.bento
