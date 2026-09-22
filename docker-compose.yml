@@ -1,0 +1,10 @@
+services:
+  detectarisco:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./csvs:/app/csvs:ro
+    restart: unless-stopped

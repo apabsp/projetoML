@@ -1,6 +1,6 @@
 {
-  "model_version": "2026.09.20",
-  "treinado_em": "2026-09-20",
+  "model_version": "2026.09.22",
+  "treinado_em": "2026-09-22",
   "algoritmo": "HistGradientBoostingClassifier",
   "janela_historico": "2020-2024",
   "ano_alvo": 2025,
@@ -257,7 +257,7 @@
     "Trechos com menos de 10 acidentes em 2020-2024 nao sao avaliados (RE-6): 33% da malha, concentrando 4,9% dos acidentes graves."
   ],
   "versoes": {
-    "python": "3.12.10",
+    "python": "3.12.12",
     "scikit-learn": "1.9.1",
     "pandas": "2.2.3"
   }

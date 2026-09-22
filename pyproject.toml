@@ -1,0 +1,16 @@
+[project]
+name = "detectarisco"
+version = "0.1.0"
+description = "DetectaRisco - estimativa de risco por trecho-periodo de rodovia federal"
+requires-python = ">=3.12"
+dependencies = [
+    "bentoml>=1.3.0",
+    "scikit-learn==1.9.1",
+    "pandas==2.2.3",
+    "pyarrow>=17.0.0",
+    "joblib>=1.4.0",
+    "numpy>=1.26.0",
+]
+
+[tool.uv]
+package = false
