@@ -10,7 +10,7 @@ Requer apenas Docker instalado e em execução.
 docker compose up --build
 ```
 
-O serviço sobe em `http://localhost:3000`. Swagger em `http://localhost:3000/docs`.
+O serviço sobe em `http://localhost:3000`. Swagger na raiz: `http://localhost:3000`.
 
 ## Testar
 

@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build e subir o servico
+        run: docker compose up --build -d
+
+      - name: Esperar o servico ficar pronto
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/livez > /dev/null; then
+              echo "servico pronto"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "servico nao respondeu a tempo"
+          docker compose logs
+          exit 1
+
+      - name: Smoke test - caso ALTO
+        run: |
+          resposta=$(curl -sf -X POST http://localhost:3000/estimar_risco \
+            -H "Content-Type: application/json" \
+            -d '{"trecho":{"uf":"AC","br":364,"km":125,"dia_semana":"Domingo","fase_dia":"Pleno dia"}}')
+          echo "$resposta"
+          echo "$resposta" | grep -q '"nivel": *"ALTO"' || { echo "esperado nivel ALTO"; exit 1; }
+
+      - name: Smoke test - caso MEDIO
+        run: |
+          resposta=$(curl -sf -X POST http://localhost:3000/estimar_risco \
+            -H "Content-Type: application/json" \
+            -d '{"trecho":{"uf":"AC","br":317,"km":285,"dia_semana":"Sexta-feira","fase_dia":"Plena noite"}}')
+          echo "$resposta"
+          echo "$resposta" | grep -q '"nivel": *"MEDIO"' || { echo "esperado nivel MEDIO"; exit 1; }
+
+      - name: Smoke test - caso BAIXO
+        run: |
+          resposta=$(curl -sf -X POST http://localhost:3000/estimar_risco \
+            -H "Content-Type: application/json" \
+            -d '{"trecho":{"uf":"AC","br":317,"km":65,"dia_semana":"Domingo","fase_dia":"Amanhecer"}}')
+          echo "$resposta"
+          echo "$resposta" | grep -q '"nivel": *"BAIXO"' || { echo "esperado nivel BAIXO"; exit 1; }
+
+      - name: Smoke test - caso INSUFICIENTE (abstencao RE-6)
+        run: |
+          resposta=$(curl -sf -X POST http://localhost:3000/estimar_risco \
+            -H "Content-Type: application/json" \
+            -d '{"trecho":{"uf":"AC","br":364,"km":25,"dia_semana":"Terca-feira","fase_dia":"Pleno dia"}}')
+          echo "$resposta"
+          echo "$resposta" | grep -q '"nivel": *"INSUFICIENTE"' || { echo "esperado nivel INSUFICIENTE"; exit 1; }
+
+      - name: Logs do servico
+        if: always()
+        run: docker compose logs
+
+      - name: Derrubar o servico
+        if: always()
+        run: docker compose down
