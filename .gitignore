@@ -3,13 +3,24 @@ csvs/
 # Parquets intermediarios. gerados por src/build_dataset.py
 data/
 
+# Segredos / ambiente local
+.env
+.env.*
+!.env.example
+
 # Python
 __pycache__/
 *.py[cod]
 .venv/
 venv/
 .ipynb_checkpoints/
+.ruff_cache/
 
 # BentoML
 bentoml/
 *.bento
+
+# Editor / SO
+.DS_Store
+.vscode/
+.idea/
