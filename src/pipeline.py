@@ -1,8 +1,9 @@
 """
-DetectaRisco - orquestracao do (re)treino.
+DetectaRisco - pipeline de (re)treino.
 
-Encadeia os estagios de src/build_dataset.py e src/train.py. Nao duplica
-regra de negocio nenhuma - features, rotulo e avaliacao do modelo continuam
+Nao treina nada sozinho: encadeia os estagios de src/build_dataset.py e
+src/train.py (o modulo que de fato treina o modelo), na ordem certa. Nao
+duplica regra de negocio nenhuma - features, rotulo e avaliacao continuam
 definidos nos dois scripts originais; este modulo so decide *quando* rodar
 cada estagio e valida os pre-requisitos (CSVs presentes).
 """

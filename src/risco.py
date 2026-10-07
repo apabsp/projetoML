@@ -10,13 +10,13 @@ a jurisdicao (RE-1) e monta a resposta com os fatores mais relevantes
 from __future__ import annotations
 
 import json
-import unicodedata
 from pathlib import Path
 
 import joblib
-import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
+
+from src.build_dataset import km_para_bin, normalizar_valor as normalizar_texto
 
 RAIZ = Path(__file__).resolve().parents[1]
 DIR_MODELOS = RAIZ / "models"
@@ -41,12 +41,6 @@ FATORES_PT = {
     "tr_media_pessoas": "média de pessoas envolvidas por acidente",
     "tr_tipo_colisao_com_objeto": "colisão com objeto frequente no trecho",
 }
-
-
-def normalizar_texto(valor: str) -> str:
-    """Minusculas, sem acento, sem espaco nas pontas. Mesma regra usada no treino."""
-    sem_acento = unicodedata.normalize("NFKD", valor.strip()).encode("ascii", "ignore").decode()
-    return sem_acento.lower()
 
 
 class Trecho(BaseModel):
@@ -79,7 +73,7 @@ class RiscoEngine:
     def estimar(self, trecho: Trecho) -> dict:
         uf = trecho.uf.strip().upper()
         br = int(trecho.br)
-        km_bin = int(np.floor(trecho.km / self.tamanho_km_bin) * self.tamanho_km_bin)
+        km_bin = int(km_para_bin(trecho.km, self.tamanho_km_bin))
         dia_semana = normalizar_texto(trecho.dia_semana)
         fase_dia = normalizar_texto(trecho.fase_dia)
 
@@ -109,7 +103,7 @@ class RiscoEngine:
         X = linha[self.features]
         probabilidades = self.pipeline.predict_proba(X)[0]
         classes = list(self.pipeline.classes_)
-        indice = int(np.argmax(probabilidades))
+        indice = int(probabilidades.argmax())
 
         return {
             "nivel": classes[indice],

@@ -2,7 +2,7 @@
 DetectaRisco - servico BentoML.
 
 So expoe rotas HTTP e delega para src/risco.py (inferencia) e
-src/treinamento.py (pipeline de treino). Nenhuma regra de negocio mora aqui.
+src/pipeline.py (orquestra o retreino). Nenhuma regra de negocio mora aqui.
 
 Uso:
     bentoml serve src.service:DetectaRiscoService
@@ -15,7 +15,7 @@ import threading
 import bentoml
 
 from src.risco import RiscoEngine, Trecho
-from src.treinamento import DIR_CSV, TreinoConfig, csvs_disponiveis, executar as executar_treino
+from src.pipeline import DIR_CSV, TreinoConfig, csvs_disponiveis, executar as executar_treino
 
 
 @bentoml.service(name="detectarisco")

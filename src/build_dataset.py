@@ -51,18 +51,22 @@ ATRIBUTOS_OCORRENCIA = [
 CHAVE_TRECHO = ["uf", "br", "km_bin", "dia_semana", "fase_dia"]
 
 
-def normalizar_texto(serie: pd.Series) -> pd.Series:
-    """Minusculas, sem acento, sem espaco sobrando.
+def normalizar_valor(valor: str) -> str:
+    """Minusculas, sem acento, sem espaco nas pontas.
 
-    A key do trecho-periodo é montada com texto normalizado para que o
-    servico aceite "Plena Noite", "plena noite" ou "PLENA NOITE" sem
+    Usado tanto aqui (para montar a chave do trecho-periodo) quanto em
+    src/risco.py (para normalizar o payload da API) - e a MESMA regra nos
+    dois lugares, senao "Plena Noite" no request vira uma chave diferente
+    de "plena noite" no treino e a busca no perfil do trecho falha.
     """
+    sem_acento = unicodedata.normalize("NFKD", valor.strip()).encode("ascii", "ignore").decode()
+    return sem_acento.lower()
+
+
+def normalizar_texto(serie: pd.Series) -> pd.Series:
+    """Aplica normalizar_valor a uma coluna inteira, preservando nulos."""
     texto = serie.astype("string").str.strip()
-    sem_acento = texto.map(
-        lambda v: unicodedata.normalize("NFKD", v).encode("ascii", "ignore").decode()
-        if pd.notna(v) else v
-    )
-    return sem_acento.str.lower()
+    return texto.map(lambda v: normalizar_valor(v) if pd.notna(v) else v)
 
 
 def caminho_csv(ano: int) -> Path:
@@ -170,9 +174,18 @@ def carregar_ocorrencias(anos: list[int]) -> pd.DataFrame:
     return pd.concat(partes, ignore_index=True)
 
 
+def km_para_bin(km, tamanho: int):
+    """Arredonda km para baixo, no multiplo de `tamanho` mais proximo (42.5, 10 -> 40).
+
+    Mesma formula usada em src/risco.py para mapear o km de uma requisicao
+    para o trecho correspondente - precisa ser identica aos dois lados.
+    """
+    return np.floor(km / tamanho) * tamanho
+
+
 def aplicar_km_bin(df: pd.DataFrame, tamanho: int) -> pd.DataFrame:
     df = df.copy()
-    df["km_bin"] = (np.floor(df["km"] / tamanho) * tamanho).astype(int)
+    df["km_bin"] = km_para_bin(df["km"], tamanho).astype(int)
     return df
 
 

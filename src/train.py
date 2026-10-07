@@ -74,7 +74,7 @@ def dividir(df: pd.DataFrame, test_size: float, seed: int):
     grupos = df["uf"].astype(str) + "|" + df["br"].astype(str) + "|" + df["km_bin"].astype(str)
     divisor = GroupShuffleSplit(n_splits=1, test_size=test_size, random_state=seed)
     idx_treino, idx_teste = next(divisor.split(df, groups=grupos))
-    return df.iloc[idx_treino].copy(), df.iloc[idx_teste].copy(), grupos
+    return df.iloc[idx_treino].copy(), df.iloc[idx_teste].copy()
 
 
 def baseline_historico(df: pd.DataFrame) -> np.ndarray:
@@ -197,7 +197,7 @@ def main(argv=None) -> int:
     print(f"Distribuicao do rotulo: "
           f"{df[ALVO].value_counts(normalize=True).mul(100).round(1).to_dict()}")
 
-    treino, teste, _ = dividir(df, args.test_size, args.seed)
+    treino, teste = dividir(df, args.test_size, args.seed)
     n_trechos_teste = teste.groupby(["uf", "br", "km_bin"]).ngroups
     print(f"\ntreino {len(treino)} linhas | teste {len(teste)} linhas "
           f"({n_trechos_teste} trechos nunca vistos)")
