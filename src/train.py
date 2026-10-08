@@ -170,9 +170,12 @@ def avaliar_prioridade(y_true, escores: dict[str, np.ndarray], seed: int,
     print(tabela.to_string(index=False, float_format=lambda v: f"{v:7.3f}"))
     return {"tabela": linhas}
 
-
 def importancias(pipeline: Pipeline, X, y, colunas, seed, n=2500) -> list[dict]:
     """Importancia por permutacao, usada para explicar a recomendacao (RE-7)."""
+    # fase_dia e a variavel que mais pesa na decisao do modelo: quando ela e
+    # embaralhada, ele separa pior BAIXO, MEDIO e ALTO. Isso mostra que o periodo
+    # do dia importa, mas nao diz sozinho qual fase e a mais perigosa.
+
     amostra = min(n, len(X))
     idx = np.random.default_rng(seed).choice(len(X), amostra, replace=False)
     resultado = permutation_importance(
