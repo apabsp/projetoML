@@ -207,8 +207,9 @@ CI (`.github/workflows/ci.yml`): a cada push, sobe o serviço com Docker, roda o
 
 ## Uso de IA
 
+| Item | Descrição |
+|---|---|
 | **Ferramenta** | Claude (Anthropic), via Claude Code |
-
 | **O que foi pedido** | Revisar o repositório a partir da lista de itens obrigatórios e requisitos da entrega. Ajustes no README. |
 
 ## Licença

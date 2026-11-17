@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -36,6 +37,8 @@ from scipy.stats import ks_2samp
 
 RAIZ = Path(__file__).resolve().parents[1]
 DIR_MODELOS = RAIZ / "models"
+# Mesma pasta que o servico usa (src/monitoramento.py), inclusive com DETECTARISCO_LOG_DIR.
+DIR_LOGS = Path(os.environ.get("DETECTARISCO_LOG_DIR", RAIZ / "logs"))
 CATEGORICAS = ["uf", "dia_semana", "fase_dia", "nivel"]
 
 
@@ -44,7 +47,10 @@ def ler_rastro(caminho: Path) -> pd.DataFrame:
     rotacionados = sorted(caminho.parent.glob(caminho.name + ".*"),
                           key=lambda p: int(p.suffix[1:]) if p.suffix[1:].isdigit() else 0,
                           reverse=True)
-    partes = [pd.read_json(p, lines=True) for p in [*rotacionados, caminho] if p.stat().st_size]
+    if not caminho.exists() and not rotacionados:
+        raise SystemExit(f"{caminho} nao existe. Suba o servico e gere carga antes (scripts/gerar_carga.py).")
+    partes = [pd.read_json(p, lines=True) for p in [*rotacionados, caminho]
+              if p.exists() and p.stat().st_size]
     if not partes:
         raise SystemExit(f"{caminho} esta vazio. Gere carga antes (scripts/gerar_carga.py).")
     bruto = pd.concat(partes, ignore_index=True)
@@ -107,7 +113,7 @@ def leitura_psi(valor: float) -> str:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--log", type=Path, default=RAIZ / "logs" / "inferencia.jsonl")
+    parser.add_argument("--log", type=Path, default=DIR_LOGS / "inferencia.jsonl")
     parser.add_argument("--ultimos", type=int, default=None,
                         help="analisa so os N pedidos mais recentes")
     parser.add_argument("--seed", type=int, default=0)
