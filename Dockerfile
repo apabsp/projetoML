@@ -11,6 +11,8 @@ RUN uv sync --locked --no-install-project
 
 COPY src/ src/
 COPY models/ models/
+# gerador de carga e verificacao do rastro, para rodar com `docker compose exec`
+COPY scripts/ scripts/
 
 EXPOSE 3000
 

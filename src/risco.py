@@ -21,6 +21,9 @@ from src.build_dataset import km_para_bin, normalizar_valor as normalizar_texto
 RAIZ = Path(__file__).resolve().parents[1]
 DIR_MODELOS = RAIZ / "models"
 
+# Quantas features (as mais importantes) vao para o rastro de monitoramento.
+N_FEATURES_RASTRO = 10
+
 # Traducao das features mais importantes (RE-7), na ordem de
 # models/metadata.json -> importancias. Nomes fora do mapa aparecem crus.
 FATORES_PT = {
@@ -66,28 +69,63 @@ class RiscoEngine:
         self.metadata = json.loads((DIR_MODELOS / "metadata.json").read_text(encoding="utf-8"))
         self.perfis = pd.read_parquet(DIR_MODELOS / "perfis.parquet")
         self.jurisdicao = pd.read_parquet(DIR_MODELOS / "jurisdicao.parquet")
+        # Chave do trecho-periodo -> posicao da linha. Busca O(1); filtrar as
+        # 120 mil linhas com mascaras booleanas custava ~18 ms por pedido
+        # (achado do proprio monitoramento: latencia de inferencia no rastro).
+        chaves = zip(self.perfis["uf"], self.perfis["br"].astype(int),
+                     self.perfis["km_bin"].astype(int),
+                     self.perfis["dia_semana"], self.perfis["fase_dia"])
+        self._indice_perfis = {chave: i for i, chave in enumerate(chaves)}
         self.features = self.metadata["features"]
         self.tamanho_km_bin = self.metadata["km_bin"]
         self.limiar_abstencao = self.metadata["limiar_abstencao"]
+        # Rastro (monitoramento): as 10 features mais importantes do modelo.
+        # Sao as que mais mexem na resposta, entao e nelas que um drift de
+        # entrada importa; as outras 58 so poluiriam o log.
+        self.features_rastro = [
+            item["feature"] for item in self.metadata["importancias"][:N_FEATURES_RASTRO]
+        ]
 
     def estimar(self, trecho: Trecho) -> dict:
+        return self.estimar_com_rastro(trecho)[0]
+
+    def estimar_com_rastro(self, trecho: Trecho) -> tuple[dict, dict]:
+        """Devolve (resposta da API, detalhes para o log de monitoramento).
+
+        A resposta da API nao muda. O rastro acrescenta o que o cliente nao
+        ve mas a analise de drift precisa: o payload normalizado, os valores
+        das features mais importantes que o modelo recebeu e as tres
+        probabilidades (o `score` sozinho mistura classes - 0,53 de ALTO e
+        0,53 de BAIXO viram o mesmo numero).
+        """
         uf = trecho.uf.strip().upper()
         br = int(trecho.br)
         km_bin = int(km_para_bin(trecho.km, self.tamanho_km_bin))
         dia_semana = normalizar_texto(trecho.dia_semana)
         fase_dia = normalizar_texto(trecho.fase_dia)
 
-        linha = self.perfis[
-            (self.perfis["uf"] == uf)
-            & (self.perfis["br"] == br)
-            & (self.perfis["km_bin"] == km_bin)
-            & (self.perfis["dia_semana"] == dia_semana)
-            & (self.perfis["fase_dia"] == fase_dia)
-        ]
+        posicao = self._indice_perfis.get((uf, br, km_bin, dia_semana, fase_dia))
+        linha = self.perfis.iloc[[posicao]] if posicao is not None else self.perfis.iloc[[]]
 
         jurisdicao_info = self._jurisdicao_do_trecho(uf, br, km_bin)
 
+        rastro = {
+            "model_version": self.metadata["model_version"],
+            "entrada": trecho.model_dump(),
+            "entrada_norm": {
+                "uf": uf, "br": br, "km_bin": km_bin,
+                "dia_semana": dia_semana, "fase_dia": fase_dia,
+            },
+        }
+
         if linha.empty:
+            rastro.update(
+                status="insuficiente",
+                features=None,
+                saida={"nivel": "INSUFICIENTE", "score": None,
+                       "prob_baixo": None, "prob_medio": None, "prob_alto": None,
+                       "jurisdicao_uop": (jurisdicao_info or {}).get("uop")},
+            )
             return {
                 "nivel": "INSUFICIENTE",
                 "score": None,
@@ -98,12 +136,23 @@ class RiscoEngine:
                 "fatores": [],
                 "jurisdicao": jurisdicao_info,
                 "model_version": self.metadata["model_version"],
-            }
+            }, rastro
 
         X = linha[self.features]
         probabilidades = self.pipeline.predict_proba(X)[0]
         classes = list(self.pipeline.classes_)
         indice = int(probabilidades.argmax())
+
+        probs = {c: round(float(p), 6) for c, p in zip(classes, probabilidades)}
+        valores = linha.iloc[0]
+        rastro.update(
+            status="ok",
+            features={f: _escalar(valores[f]) for f in self.features_rastro},
+            saida={"nivel": classes[indice], "score": round(float(probabilidades[indice]), 4),
+                   "prob_baixo": probs.get("BAIXO"), "prob_medio": probs.get("MEDIO"),
+                   "prob_alto": probs.get("ALTO"),
+                   "jurisdicao_uop": (jurisdicao_info or {}).get("uop")},
+        )
 
         return {
             "nivel": classes[indice],
@@ -114,7 +163,7 @@ class RiscoEngine:
             ],
             "jurisdicao": jurisdicao_info,
             "model_version": self.metadata["model_version"],
-        }
+        }, rastro
 
     def _jurisdicao_do_trecho(self, uf: str, br: int, km_bin: int) -> dict | None:
         linha = self.jurisdicao[
@@ -131,3 +180,8 @@ class RiscoEngine:
             "regional": registro["regional"],
             "municipio": registro["municipio"],
         }
+
+
+def _escalar(valor):
+    """numpy -> tipo nativo, para o json do rastro."""
+    return valor.item() if hasattr(valor, "item") else valor

@@ -58,6 +58,10 @@ flowchart LR
     Risco --> Models
 
     Pipeline -.recarrega modelo.-> Risco
+
+    Service -.middleware: 1 linha por pedido.-> Monit[src/monitoramento.py]
+    Monit --> Logs[(logs/inferencia.jsonl)]
+    Monit -->|GET /metrics| Cliente
 ```
 
 Leitura do desenho: as setas sólidas são chamada direta de função/import. A
@@ -78,6 +82,34 @@ só recebe a requisição, chama o módulo certo e devolve o dicionário.
   pegar o lock, chama `executar_treino(config)` e depois
   `self.engine.carregar()` pra trocar o modelo em uso sem reiniciar o
   servidor.
+
+## `src/monitoramento.py` — rastro e métricas
+
+Observa o que entra e o que sai, sem mudar a resposta da API. Detalhes em
+[RASTRO.md](RASTRO.md) e [METRICAS.md](METRICAS.md).
+
+- `MiddlewareRastro` — middleware ASGI registrado em `service.py`. Envolve
+  cada pedido a `/estimar_risco` e `/treinar`: mede a latência ponta a
+  ponta, captura o código HTTP e grava **uma linha** em
+  `logs/inferencia.jsonl` no fim. Fica no nível ASGI porque o BentoML
+  recusa payload inválido (HTTP 400) antes do handler rodar; só assim os
+  pedidos ruins também deixam rastro.
+- `detalhar(**campos)` — o handler chama para anexar à linha do pedido
+  atual o que só ele sabe (features, probabilidades). Usa um `ContextVar`
+  com um dict mutável, compartilhado entre o middleware e a thread do
+  handler.
+- `FormatadorJsonl` — `logging.Formatter` que escreve JSON Lines com
+  timestamp ISO 8601 em microssegundos e com fuso.
+- `RASTRO` — logger com `RotatingFileHandler` (append-only; rotação por
+  renomeação a cada 10 MB, 5 backups).
+- `Metricas` / `iniciar_metricas()` — contadores e histogramas próprios
+  (`detectarisco_*`) expostos no `GET /metrics` do BentoML. São criados no
+  `__init__` do serviço, e não na importação, porque o BentoML só configura
+  o modo multiprocesso do Prometheus quando o worker sobe.
+
+O `risco.py` ganhou `estimar_com_rastro()`, que devolve a resposta da API
+(igual à de antes) **e** o dicionário com o que o log precisa: payload
+normalizado, as 10 features mais importantes e as 3 probabilidades.
 
 ## `src/risco.py` — motor de inferência
 

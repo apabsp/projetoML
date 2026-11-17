@@ -7,4 +7,6 @@ services:
       - ./models:/app/models
       - ./data:/app/data
       - ./csvs:/app/csvs:ro
+      # rastro de inferencia (append-only): fica no host e sobrevive ao container
+      - ./logs:/app/logs
     restart: unless-stopped

@@ -2,6 +2,8 @@
 csvs/
 # Parquets intermediarios. gerados por src/build_dataset.py
 data/
+# Rastro de inferencia gerado pelo servico (src/monitoramento.py)
+logs/
 
 # Segredos / ambiente local
 .env

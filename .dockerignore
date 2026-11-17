@@ -1,6 +1,7 @@
 .git/
 csvs/
 data/
+logs/
 notebooks/
 evidencias/
 *.md

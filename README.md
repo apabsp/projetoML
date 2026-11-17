@@ -9,7 +9,7 @@ API que estima o **nível de risco (BAIXO / MEDIO / ALTO)** de um trecho de rodo
 
 | Item | Versão |
 |---|---|
-| Python | **3.12** ou superior (testado com 3.12) |
+| Python | **3.12** (fixado em `.python-version`; se você não tiver, o `uv` baixa sozinho). 3.14 não é suportado: o `pandas==2.2.3` exigido pelo modelo não tem pacote para ele |
 | [uv](https://docs.astral.sh/uv/getting-started/installation/) | qualquer versão recente |
 | Internet | só na 1ª vez, para baixar as dependências (~1–2 min). Depois tudo roda offline |
 
@@ -105,7 +105,59 @@ Respostas completas e screenshots do Swagger em [`evidencias/`](evidencias/).
 | Rota | Uso |
 |---|---|
 | `GET /livez`, `GET /readyz` | probes padrão do BentoML |
+| `GET /metrics` | métricas no formato Prometheus (ver [Monitoramento](#monitoramento)) |
 | `POST /treinar` | retreina o modelo (opcional, ver abaixo) |
+
+## Monitoramento
+
+O serviço registra o que recebe e o que devolve de duas formas:
+
+- **Rastro em arquivo:** `logs/inferencia.jsonl`, append-only, **uma linha JSON por pedido** (inclusive pedidos inválidos). Guarda a entrada, as 10 features mais importantes que o modelo usou, as 3 probabilidades de saída, a latência e a data e hora com microssegundos e fuso. Ao chegar a 10 MB, o arquivo é rotacionado (`.1`…`.5`). Formato e justificativa de cada variável: **[docs/RASTRO.md](docs/RASTRO.md)**.
+- **`GET /metrics`:** formato Prometheus, com as métricas do BentoML (latência e contagem por código HTTP) e métricas próprias (`detectarisco_*`: nível previsto, `prob_alto`, tempo do modelo e erros). Como calcular histograma, boxplot e taxa de erros, e por quanto tempo os dados ficam guardados: **[docs/METRICAS.md](docs/METRICAS.md)** e a planilha **[docs/metricas.xlsx](docs/metricas.xlsx)**.
+
+### Gerar carga e ver o rastro evoluir
+
+Com o serviço no ar (seção anterior), abra **dois terminais** na pasta do projeto.
+
+**Terminal A: acompanhar o rastro ao vivo**
+
+```bash
+tail -F logs/inferencia.jsonl                          # Linux / macOS / Git Bash (-F segue a rotação)
+Get-Content logs\inferencia.jsonl -Wait -Tail 5        # Windows PowerShell
+```
+
+**Terminal B: gerar carga**
+
+```bash
+uv run python scripts/gerar_carga.py                   # 300 pedidos, mesma distribuição do treino
+uv run python scripts/gerar_carga.py --modo drift      # 300 pedidos com padrão de uso deslocado
+uv run python scripts/gerar_carga.py --n 0 --taxa 2    # sem fim, 2 pedidos/s (Ctrl+C para parar)
+```
+
+Os pedidos são sorteados do conjunto de treino (`models/perfis.parquet`). Em todos os modos, ~5 % caem fora da malha avaliável (`INSUFICIENTE`) e ~3 % são inválidos de propósito (HTTP 400), para que a taxa de erros não fique vazia. Opções: `--n`, `--taxa`, `--concorrencia`, `--seed`, `--url` (`--help` para todas).
+
+**Ver as métricas**
+
+```bash
+curl -s http://localhost:3000/metrics | grep -E "^(detectarisco_predicoes|bentoml_service_request_total)"
+```
+
+No PowerShell, use `curl.exe` em vez de `curl` e troque o `grep -E` por `Select-String "^(detectarisco_predicoes|bentoml_service_request_total)"`.
+
+**Verificar o rastro contra a referência (KS / PSI)**
+
+```bash
+uv run python scripts/analisar_rastro.py --ultimos 300
+```
+
+A saída mostra, para cada variável de entrada e saída, KS, PSI e o ruído esperado do PSI para o N coletado. Depois do `--modo drift`, as variáveis deslocadas aparecem como `DRIFT`.
+
+**Com Docker:** o rastro aparece em `./logs` no host (volume), e os scripts rodam dentro do container:
+
+```bash
+docker compose exec detectarisco python scripts/gerar_carga.py
+docker compose exec detectarisco python scripts/analisar_rastro.py --ultimos 300
+```
 
 ## Retreinar (opcional)
 
@@ -135,16 +187,23 @@ O projeto não usa chaves, tokens nem senhas. Mesmo assim, `.env` está no `.git
 
 ```
 src/
-├─ service.py         # BentoML: rotas HTTP (/estimar_risco, /treinar)
+├─ service.py         # BentoML: rotas HTTP (/estimar_risco, /treinar, /metrics)
 ├─ risco.py           # motor de inferência
+├─ monitoramento.py   # rastro em arquivo (JSONL) + métricas Prometheus próprias
 ├─ pipeline.py        # orquestra o retreino
 ├─ build_dataset.py   # csvs/ -> data/*.parquet
 └─ train.py           # data/ -> models/
+scripts/
+├─ gerar_carga.py               # carga sorteada do conjunto de treino (referência / drift)
+├─ analisar_rastro.py           # KS / PSI do rastro contra a referência
+└─ gerar_planilha_metricas.py   # dois scrapes do /metrics -> docs/metricas.xlsx
 models/               # model.pkl, metadata.json, perfis.parquet, jurisdicao.parquet
+docs/                 # ARQUITETURA.md, RASTRO.md, METRICAS.md, metricas.xlsx
+logs/                 # inferencia.jsonl (gerado pelo serviço, fora do git)
 evidencias/           # curls e screenshots do Swagger
 ```
 
-CI (`.github/workflows/ci.yml`): smoke test com Docker a cada push.
+CI (`.github/workflows/ci.yml`): a cada push, sobe o serviço com Docker, roda os smoke tests e confere o formato do rastro e as métricas do `/metrics`.
 
 ## Uso de IA
 

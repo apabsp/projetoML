@@ -58,6 +58,37 @@ jobs:
           echo "$resposta"
           echo "$resposta" | grep -q '"nivel": *"INSUFICIENTE"' || { echo "esperado nivel INSUFICIENTE"; exit 1; }
 
+      - name: Smoke test - entrada invalida devolve 400
+        run: |
+          codigo=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3000/estimar_risco             -H "Content-Type: application/json" -d '{"trecho":{"uf":"AC","br":364}}')
+          echo "HTTP $codigo"
+          test "$codigo" = "400" || { echo "esperado HTTP 400"; exit 1; }
+
+      - name: Rastro - uma linha JSON por pedido em logs/inferencia.jsonl
+        run: |
+          cat logs/inferencia.jsonl
+          linhas=$(wc -l < logs/inferencia.jsonl)
+          echo "$linhas linhas"
+          test "$linhas" -ge 5 || { echo "esperado >= 5 linhas (4 smoke tests + 1 invalido)"; exit 1; }
+          python3 -c "
+          import json
+          linhas = [json.loads(l) for l in open('logs/inferencia.jsonl')]
+          status = [l['status'] for l in linhas]
+          assert 'ok' in status and 'insuficiente' in status and 'erro_validacao' in status, status
+          assert all('ts' in l and 'latencia_ms' in l for l in linhas)
+          ok = next(l for l in linhas if l['status'] == 'ok')
+          assert len(ok['features']) == 10 and ok['saida']['prob_alto'] is not None, ok
+          print('formato ok:', status)
+          "
+
+      - name: GET /metrics - formato Prometheus com metricas proprias
+        run: |
+          metricas=$(curl -sf http://localhost:3000/metrics)
+          for nome in bentoml_service_request_duration_seconds_bucket bentoml_service_request_total                       detectarisco_predicoes_total detectarisco_prob_alto_bucket                       detectarisco_inferencia_segundos_bucket detectarisco_erros_total; do
+            echo "$metricas" | grep -q "^$nome" || { echo "faltou $nome"; exit 1; }
+            echo "ok: $nome"
+          done
+
       - name: Logs do servico
         if: always()
         run: docker compose logs
